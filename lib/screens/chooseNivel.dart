@@ -85,6 +85,7 @@ class _NivelsChooseViewState extends State<NivelsChooseView> {
                             nivel: nivel,
                             question: nivel?["question"],
                             options: nivel?["options"],
+                            correctAnswer: nivel?["correctAnswer"],
                           ),
                         ),
                       );
@@ -98,6 +99,7 @@ class _NivelsChooseViewState extends State<NivelsChooseView> {
                             nivel: nivel,
                             question: nivel?["question"],
                             options: nivel?["options"],
+                            correctAnswer: nivel?["correctAnswer"],
                           ),
                         ),
                       );
@@ -139,8 +141,6 @@ class _NivelsChooseViewState extends State<NivelsChooseView> {
                         MaterialPageRoute(
                           builder: (context) => AnimalSoundQuiz(
                             index: index + 1,
-                            planetInfo: widget.planetInfo,
-                            nivel: nivel,
                             audioSource: nivel?["audioSource"],
                             options: nivel?["options"],
                             correctAnswer: nivel?["correctAnswer"],
@@ -157,7 +157,10 @@ class _NivelsChooseViewState extends State<NivelsChooseView> {
                     //   ),
                     // );
                   },
-                  child: PuzzlePiece(index: index),
+                  child: PuzzlePiece(
+                    index: index,
+                    planetInfo: widget.planetInfo,
+                  ),
                 );
               },
             ),
@@ -170,8 +173,9 @@ class _NivelsChooseViewState extends State<NivelsChooseView> {
 
 class PuzzlePiece extends StatelessWidget {
   final int index;
+  final PlanetInfo? planetInfo;
 
-  const PuzzlePiece({required this.index});
+  const PuzzlePiece({required this.index, required this.planetInfo});
 
   @override
   Widget build(BuildContext context) {

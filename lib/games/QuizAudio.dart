@@ -1,22 +1,9 @@
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
-import 'package:readlexi/data/datas.dart';
-
-// void main() {
-//   runApp(const MaterialApp(
-//     home: AnimalSoundQuiz(
-//       audioSource: 'assets/animal_sound.mp3',
-//       options: ['Lion', 'Elephant', 'Dog', 'Cat'],
-//       correctAnswer: 'Dog',
-//     ),
-//   ));
-// }
 
 class AnimalSoundQuiz extends StatefulWidget {
   final int index;
-  final PlanetInfo? planetInfo;
-  final Map<String, dynamic>? nivel;
   final String audioSource;
   final List<dynamic> options;
   final String correctAnswer;
@@ -27,8 +14,6 @@ class AnimalSoundQuiz extends StatefulWidget {
     required this.options,
     required this.correctAnswer,
     required this.index,
-    this.planetInfo,
-    this.nivel,
   });
 
   @override
@@ -40,7 +25,7 @@ class _AnimalSoundQuizState extends State<AnimalSoundQuiz> {
   Duration? _duration;
   Duration? _position;
   bool _isPlaying = false;
-  String selectedOption = "";
+  int? _selectedOptionIndex; // Guarda la opción seleccionada por el usuario
 
   @override
   void initState() {
@@ -74,7 +59,7 @@ class _AnimalSoundQuizState extends State<AnimalSoundQuiz> {
   }
 
   Future<void> _play() async {
-    await player.setSource(AssetSource(widget.audioSource));
+    await player.setSource(AssetSource("audio/${widget.audioSource}"));
     await player.resume();
   }
 
@@ -89,15 +74,10 @@ class _AnimalSoundQuizState extends State<AnimalSoundQuiz> {
     });
   }
 
-  void _selectOption(String option) {
-    setState(() {
-      selectedOption = option;
-    });
-  }
-
   void _confirmAnswer() {
-    if (selectedOption.isNotEmpty) {
-      bool isCorrect = selectedOption == widget.correctAnswer;
+    if (_selectedOptionIndex != null) {
+      bool isCorrect =
+          widget.options[_selectedOptionIndex!] == widget.correctAnswer;
       _showResultDialog(isCorrect);
     }
   }
@@ -107,10 +87,10 @@ class _AnimalSoundQuizState extends State<AnimalSoundQuiz> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(isCorrect ? "Correct!" : "Incorrect"),
+          title: Text(isCorrect ? "¡Correcto!" : "Incorrecto"),
           content: Text(isCorrect
-              ? "You selected the right answer."
-              : "The correct answer was: ${widget.correctAnswer}."),
+              ? "¡Has seleccionado la respuesta correcta!"
+              : "La respuesta correcta era: ${widget.correctAnswer}."),
           actions: <Widget>[
             TextButton(
               child: const Text("OK"),
@@ -134,33 +114,43 @@ class _AnimalSoundQuizState extends State<AnimalSoundQuiz> {
         : 0.0;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Animal Sound Quiz')),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('Animal Sound Quiz'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              "Identify an animal based on its sound.",
-              style: TextStyle(fontSize: 20),
+              "Identifica el sonido del animal.",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
-            // Slider and audio controls
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(_position != null ? _positionText() : '0s'),
+                Text(_position != null ? _positionText() : '0:00'),
                 Expanded(
                   child: Slider(
                     activeColor: Colors.pink,
                     value: sliderValue,
                     onChanged: (value) {
-                      final newPosition = value * _duration!.inMilliseconds;
-                      player.seek(Duration(milliseconds: newPosition.round()));
+                      if (_duration != null) {
+                        final newPosition = value * _duration!.inMilliseconds;
+                        player
+                            .seek(Duration(milliseconds: newPosition.round()));
+                      }
                     },
                   ),
                 ),
-                Text(_duration != null ? _durationText() : '0s'),
+                Text(_duration != null ? _durationText() : '0:00'),
               ],
             ),
             IconButton(
@@ -170,26 +160,28 @@ class _AnimalSoundQuizState extends State<AnimalSoundQuiz> {
               onPressed: _isPlaying ? _pause : _play,
             ),
             const SizedBox(height: 20),
-            // Options buttons
-            Expanded(
-              child: ListView.builder(
-                itemCount: widget.options.length,
-                itemBuilder: (context, index) {
-                  return _buildOptionButton(widget.options[index]);
-                },
+            ..._buildOptionButtons(),
+            const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: _selectedOptionIndex == null
+                    ? null // Deshabilitar botón si no se seleccionó opción
+                    : _confirmAnswer,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _selectedOptionIndex == null
+                      ? Colors.grey
+                      : Colors.pink, // Cambia color según estado
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                ),
+                child: const Text(
+                  'Confirmar respuesta',
+                  style: TextStyle(fontSize: 18, color: Colors.white),
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            // Confirm Answer Button
-            ElevatedButton(
-              onPressed: selectedOption.isNotEmpty ? _confirmAnswer : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.pink,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              ),
-              child:
-                  const Text("Confirm Answer", style: TextStyle(fontSize: 18)),
             ),
           ],
         ),
@@ -197,10 +189,43 @@ class _AnimalSoundQuizState extends State<AnimalSoundQuiz> {
     );
   }
 
-  // Helper functions for formatting
+  List<Widget> _buildOptionButtons() {
+    return widget.options.asMap().entries.map<Widget>((entry) {
+      int index = entry.key;
+      String option = entry.value;
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: ElevatedButton(
+          onPressed: () {
+            setState(() {
+              _selectedOptionIndex = index;
+            });
+          },
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            backgroundColor: _selectedOptionIndex == index
+                ? Colors.blue[100]
+                : Colors.grey[100],
+            foregroundColor:
+                _selectedOptionIndex == index ? Colors.blue : Colors.black87,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8.0),
+            ),
+          ),
+          child: Text(
+            option,
+            style: const TextStyle(fontSize: 16),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }).toList();
+  }
+
+  // Formato para mostrar el tiempo de posición
   String _positionText() {
     final minutes =
-        _position!.inMinutes.remainder(60).toString().padLeft(2, '0');
+        _position!.inMinutes.remainder(60).toString().padLeft(1, '0');
     final seconds =
         _position!.inSeconds.remainder(60).toString().padLeft(2, '0');
     return '$minutes:$seconds';
@@ -208,27 +233,9 @@ class _AnimalSoundQuizState extends State<AnimalSoundQuiz> {
 
   String _durationText() {
     final minutes =
-        _duration!.inMinutes.remainder(60).toString().padLeft(2, '0');
+        _duration!.inMinutes.remainder(60).toString().padLeft(1, '0');
     final seconds =
         _duration!.inSeconds.remainder(60).toString().padLeft(2, '0');
     return '$minutes:$seconds';
-  }
-
-  // Option Button Builder
-  Widget _buildOptionButton(String option) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          backgroundColor:
-              selectedOption == option ? Colors.pink : Colors.white,
-          foregroundColor:
-              selectedOption == option ? Colors.white : Colors.black,
-        ),
-        onPressed: () => _selectOption(option),
-        child: Text(option, style: const TextStyle(fontSize: 18)),
-      ),
-    );
   }
 }
