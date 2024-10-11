@@ -8,10 +8,10 @@ import 'package:readlexi/games/QuizTextyQues.dart';
 import 'package:readlexi/games/TrueoFlase.dart';
 
 class NivelsChooseView extends StatefulWidget {
-  final PlanetInfo? planetInfo;
+  final PlanetInfo planetInfo;
 
   // Constructor que acepta el nombre de la etapa
-  const NivelsChooseView({this.planetInfo});
+  const NivelsChooseView({required this.planetInfo});
 
   @override
   State<NivelsChooseView> createState() => _NivelsChooseViewState();
@@ -74,7 +74,7 @@ class _NivelsChooseViewState extends State<NivelsChooseView> {
                     print("nivel");
                     var nivel = await _getNivelById('$idpregunta');
                     print(nivel?["tipo"]);
-                    if (nivel?['tipo'] == "QuizPregunata") {
+                    if (nivel?['tipo'] == "QuizPregunta") {
                       print(nivel);
                       Navigator.push(
                         context,
@@ -175,7 +175,7 @@ class PuzzlePiece extends StatelessWidget {
   final int index;
   final PlanetInfo? planetInfo;
 
-  const PuzzlePiece({required this.index, required this.planetInfo});
+  const PuzzlePiece({super.key, required this.index, required this.planetInfo});
 
   @override
   Widget build(BuildContext context) {
@@ -247,12 +247,12 @@ class _PieceDetailPageState extends State<PieceDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Detalle de la Pieza"),
+        title: const Text("Detalle de la Pieza"),
       ),
       body: Center(
         child: Text(
           "Estás viendo la pieza número ${widget.index} ${widget.planetInfo?.name.toString()}",
-          style: TextStyle(fontSize: 24),
+          style: const TextStyle(fontSize: 24),
         ),
       ),
     );

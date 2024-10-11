@@ -53,7 +53,7 @@ class AuthCheck extends StatelessWidget {
               future: authUserGoogle.checkIfAgeExists(user.uid),
               builder: (context, ageSnapshot) {
                 if (ageSnapshot.connectionState == ConnectionState.waiting) {
-                  return Scaffold(
+                  return const Scaffold(
                     body: Center(child: CircularProgressIndicator()),
                   );
                 }
@@ -69,7 +69,7 @@ class AuthCheck extends StatelessWidget {
           }
         }
 
-        return Scaffold(
+        return const Scaffold(
           body: Center(child: CircularProgressIndicator()),
         );
       },

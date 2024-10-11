@@ -1,36 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:readlexi/data/datas.dart';
 
-// class MyApp extends StatelessWidget {
-//   @override
-//   Widget build(BuildContext context) {
-//     return MaterialApp(
-//       title: 'Quiz App',
-//       theme: ThemeData(
-//         primarySwatch: Colors.blue,
-//       ),
-//       home: QuizIntroPage(
-//         introText:
-//             'Tesla es una compañía que produce autos eléctricos, paneles solares y soluciones de almacenamiento de energía. Fundada en 2003 por Elon Musk, la compañía rápidamente se ha convertido en un líder en la industria de vehículos eléctricos. Tesla es conocida por su tecnología innovadora, diseños elegantes y compromiso con la sostenibilidad.',
-//         buttonText: 'Let\'s Start',
-//         quizData: {
-//           'question': 'What is Tesla\'s commitment to sustainability?',
-//           'options': [
-//             {'text': 'Using only coal as a power source', 'isCorrect': false},
-//             {
-//               'text':
-//                   'Reducing its impact on the environment by using renewable energy sources',
-//               'isCorrect': true
-//             },
-//             {'text': 'Building large-scale oil refineries', 'isCorrect': false},
-//             {'text': 'Producing gasoline-powered cars', 'isCorrect': false},
-//           ],
-//         },
-//       ),
-//     );
-//   }
-// }
-
 // Página de introducción
 class QuizIntroPage extends StatelessWidget {
   final String introText;

@@ -1,9 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:readlexi/utils/logUser.dart';
 import 'package:readlexi/views/chooseEtapas.dart';
-import 'package:readlexi/views/games.dart';
 import 'package:readlexi/views/selecion.dart';
 
 class Home extends StatefulWidget {

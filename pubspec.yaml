@@ -71,7 +71,7 @@ flutter:
     - assets/apple.png
     - assets/cat.png
     - assets/dog.png
-    - assets/ambient_c_motion.mp3
+    - assets/audio/ambient_c_motion.mp3
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
