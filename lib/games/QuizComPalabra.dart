@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:readlexi/data/datas.dart';
+import 'package:readlexi/utils/logUser.dart';
 
 class QuizComPala extends StatefulWidget {
   final int index;
@@ -9,6 +11,7 @@ class QuizComPala extends StatefulWidget {
   final String correctAnswer;
   final String questionText;
   final String imageUrl;
+  final int vidasIniciales; // Nuevo parámetro para definir las vidas iniciales
 
   QuizComPala({
     required this.letters,
@@ -18,6 +21,7 @@ class QuizComPala extends StatefulWidget {
     required this.index,
     this.planetInfo,
     this.nivel,
+    required this.vidasIniciales, // Inicializamos con un número de vidas personalizado
   });
 
   @override
@@ -27,12 +31,14 @@ class QuizComPala extends StatefulWidget {
 class _QuizComPalaState extends State<QuizComPala> {
   late List<String> selectedLetters;
   late List<bool> isSelected;
+  late int vidas; // Vidas, se inicializan con el valor de `vidasIniciales`
 
   @override
   void initState() {
     super.initState();
     selectedLetters = [];
     isSelected = List.generate(widget.letters.length, (index) => false);
+    vidas = widget.vidasIniciales; // Asignamos el valor de las vidas iniciales
   }
 
   // Función para seleccionar o deseleccionar letras
@@ -51,16 +57,33 @@ class _QuizComPalaState extends State<QuizComPala> {
   }
 
   // Función para verificar la respuesta
-  void checkAnswer() {
+  void checkAnswer() async {
     String userAnswer = selectedLetters.join();
     bool isCorrect = userAnswer == widget.correctAnswer;
+    final UserService _userService = UserService();
+    var userData = await _userService.getUserData();
+    if (!isCorrect) {
+      await descontarVida(userData?["uid"]);
+    } else {
+      marcarNivelCompletado(userData?["uid"], "${widget.nivel?["etapaId"]}",
+          "${widget.nivel?["id"]}");
+    }
+    if (!isCorrect) {
+      setState(() {
+        vidas -= 1; // Restamos una vida si la respuesta es incorrecta
+      });
+    }
 
+    // Mostrar el diálogo correspondiente
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: Text(isCorrect ? "¡Correcto!" : "Incorrecto"),
-        content: Text(
-            isCorrect ? "Has adivinado correctamente." : "Intenta de nuevo."),
+        content: Text(isCorrect
+            ? "Has adivinado correctamente."
+            : vidas > 0
+                ? "Intenta de nuevo."
+                : "Te has quedado sin vidas."),
         actions: [
           TextButton(
             onPressed: () {
@@ -71,6 +94,71 @@ class _QuizComPalaState extends State<QuizComPala> {
         ],
       ),
     );
+
+    // Si el usuario se queda sin vidas, mostramos un diálogo adicional
+    if (vidas == 0) {
+      _showNoLivesDialog();
+    }
+  }
+
+  // Función para mostrar un mensaje cuando se queda sin vidas
+  Future<void> _showNoLivesDialog() async {
+    await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('¡Sin vidas!'),
+        content: Text('No tienes más vidas disponibles.'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Cierra el diálogo
+            },
+            child: const Text('OK'),
+          )
+        ],
+      ),
+    );
+  }
+
+  // Widget para mostrar los corazones en función del número de vidas restantes
+  Widget _buildVidas() {
+    List<Widget> hearts = [];
+    for (int i = 0; i < widget.vidasIniciales; i++) {
+      hearts.add(Icon(
+        i < vidas
+            ? Icons.favorite
+            : Icons.favorite_border, // Corazón lleno o vacío
+        color: Colors.red,
+        size: 24,
+      ));
+    }
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: hearts,
+    );
+  }
+
+  Future<void> marcarNivelCompletado(
+      String uid, String etapaId, String nivelId) async {
+    DocumentReference usuarioRef =
+        FirebaseFirestore.instance.collection('users').doc(uid);
+
+    await usuarioRef.update({'progreso.$etapaId.$nivelId': true});
+  }
+
+  Future<void> descontarVida(String uid) async {
+    DocumentReference usuarioRef =
+        FirebaseFirestore.instance.collection('users').doc(uid);
+    DocumentSnapshot usuarioSnapshot = await usuarioRef.get();
+    if (usuarioSnapshot.exists) {
+      Map<String, dynamic> data =
+          usuarioSnapshot.data() as Map<String, dynamic>;
+      int vidasActuales = data['vidas'];
+      await usuarioRef.update({
+        'vidas': vidasActuales - 1,
+      });
+      print('Vida descontada. Vidas restantes: ${vidasActuales - 1}');
+    }
   }
 
   // Función para resetear el quiz
@@ -78,6 +166,7 @@ class _QuizComPalaState extends State<QuizComPala> {
     setState(() {
       selectedLetters.clear();
       isSelected = List.generate(widget.letters.length, (index) => false);
+      vidas = widget.vidasIniciales; // Restablecemos las vidas al valor inicial
     });
   }
 
@@ -86,11 +175,16 @@ class _QuizComPalaState extends State<QuizComPala> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Car Quiz"),
-        centerTitle: true,
+        title: const Text("Quiz"),
+        // centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
+          // Agregamos los íconos de corazones al AppBar
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: _buildVidas(),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: resetQuiz,
@@ -112,13 +206,18 @@ class _QuizComPalaState extends State<QuizComPala> {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 20),
             // Imagen
-            Image.asset(
-              "assets/${widget.imageUrl}",
-              height: 100,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(35),
+              child: Image.asset(
+                "assets/question/${widget.imageUrl}", // Muestra la imagen
+                height: 250,
+              ),
             ),
-            const SizedBox(height: 30),
+            // Image.asset(
+            //     "assets/question/${widget.imageUrl}", // Muestra la imagen
+            //     height: 250,
+            //   ),
             // Espacios para la respuesta
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -181,9 +280,13 @@ class _QuizComPalaState extends State<QuizComPala> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: checkAnswer,
+                onPressed: vidas > 0 // Deshabilitamos el botón si no hay vidas
+                    ? checkAnswer
+                    : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.pink,
+                  backgroundColor: vidas > 0
+                      ? Colors.pink
+                      : Colors.grey, // Cambiar el color si no hay vidas
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -194,7 +297,6 @@ class _QuizComPalaState extends State<QuizComPala> {
                 ),
               ),
             ),
-            // SizedBox(height: 10,)
           ],
         ),
       ),

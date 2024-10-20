@@ -143,8 +143,20 @@ class _EtapaPageState extends State<EtapaPage> {
                               ),
                               Hero(
                                 tag: planet.position,
-                                child: Image.asset(planet.iconImage ??
-                                    'assets/images/placeholder.png'),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(
+                                      20), // Ajusta el radio del borde aquí
+                                  child: SizedBox(
+                                    width: 400, // Define el ancho deseado
+                                    height: 200, // Define la altura deseada
+                                    child: Image.asset(
+                                      planet.iconImage ??
+                                          'assets/images/placeholder.png',
+                                      fit: BoxFit
+                                          .cover, // Ajusta cómo se muestra la imagen dentro del tamaño
+                                    ),
+                                  ),
+                                ),
                               ),
                             ],
                           ),

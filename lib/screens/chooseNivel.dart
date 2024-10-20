@@ -6,6 +6,7 @@ import 'package:readlexi/games/QuizAudio.dart';
 import 'package:readlexi/games/QuizComPalabra.dart';
 import 'package:readlexi/games/QuizTextyQues.dart';
 import 'package:readlexi/games/TrueoFlase.dart';
+import 'package:readlexi/utils/logUser.dart';
 
 class NivelsChooseView extends StatefulWidget {
   final PlanetInfo planetInfo;
@@ -18,6 +19,8 @@ class NivelsChooseView extends StatefulWidget {
 }
 
 class _NivelsChooseViewState extends State<NivelsChooseView> {
+  final UserService _userService = UserService();
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<Map<String, dynamic>?> _getNivelById(String id) async {
@@ -73,6 +76,8 @@ class _NivelsChooseViewState extends State<NivelsChooseView> {
                             1);
                     print("nivel");
                     var nivel = await _getNivelById('$idpregunta');
+                    var userData = await _userService.getUserData();
+                    print(userData);
                     print(nivel?["tipo"]);
                     if (nivel?['tipo'] == "QuizPregunta") {
                       print(nivel);
@@ -86,6 +91,8 @@ class _NivelsChooseViewState extends State<NivelsChooseView> {
                             question: nivel?["question"],
                             options: nivel?["options"],
                             correctAnswer: nivel?["correctAnswer"],
+                            imageName: nivel?["imageName"],
+                            vidasIniciales: userData?["vidas"],
                           ),
                         ),
                       );
@@ -100,6 +107,8 @@ class _NivelsChooseViewState extends State<NivelsChooseView> {
                             question: nivel?["question"],
                             options: nivel?["options"],
                             correctAnswer: nivel?["correctAnswer"],
+                            imageName: nivel?["imageName"],
+                            vidasIniciales: userData?["vidas"],
                           ),
                         ),
                       );
@@ -109,13 +118,14 @@ class _NivelsChooseViewState extends State<NivelsChooseView> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => QuizIntroPage(
-                            index: index + 1,
-                            planetInfo: widget.planetInfo,
-                            nivel: nivel,
-                            introText: nivel?["introText"],
-                            buttonText: 'Let\'s Start',
-                            quizData: nivel?["quizData"],
-                          ),
+                              index: index + 1,
+                              planetInfo: widget.planetInfo,
+                              nivel: nivel,
+                              introText: nivel?["introText"],
+                              buttonText: 'Let\'s Start',
+                              quizData: nivel?["quizData"],
+                              vidasIniciales: userData?["vidas"],
+                              imagen: nivel?["imageName"]),
                         ),
                       );
                     } else if (nivel?['tipo'] == "QuizComPalabra") {
@@ -131,6 +141,7 @@ class _NivelsChooseViewState extends State<NivelsChooseView> {
                             correctAnswer: nivel?["correctAnswer"],
                             questionText: nivel?["questionText"],
                             imageUrl: nivel?["imageUrl"],
+                            vidasIniciales: userData?["vidas"],
                           ),
                         ),
                       );
@@ -140,11 +151,12 @@ class _NivelsChooseViewState extends State<NivelsChooseView> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => AnimalSoundQuiz(
-                            index: index + 1,
-                            audioSource: nivel?["audioSource"],
-                            options: nivel?["options"],
-                            correctAnswer: nivel?["correctAnswer"],
-                          ),
+                              nivel: nivel,
+                              index: index + 1,
+                              audioSource: nivel?["audioSource"],
+                              options: nivel?["options"],
+                              correctAnswer: nivel?["correctAnswer"],
+                              vidasIniciales: userData?["vidas"]),
                         ),
                       );
                     }

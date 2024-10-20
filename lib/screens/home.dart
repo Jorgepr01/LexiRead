@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:readlexi/utils/logUser.dart';
 import 'package:readlexi/views/chooseEtapas.dart';
+import 'package:readlexi/views/motivation.dart';
 import 'package:readlexi/views/selecion.dart';
 
 class Home extends StatefulWidget {
@@ -12,7 +13,11 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   int selecterindex = 0;
-  final screens = [const LexiReadHomePage(), const EtapaPage()];
+  final screens = [
+    const LexiReadHomePage(),
+    const EtapaPage(),
+    MotivationalMessagesPage()
+  ];
   // ignore: prefer_typing_uninitialized_variables
   var userName, email, edad;
   Future<void> fetchUserData() async {
@@ -74,6 +79,12 @@ class _HomeState extends State<Home> {
               icon: Icon(Icons.videogame_asset),
               activeIcon: Icon(Icons.videogame_asset_off_outlined),
               label: "game",
+              backgroundColor: colors.secondary,
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.connect_without_contact_outlined),
+              activeIcon: Icon(Icons.connect_without_contact),
+              label: "Motivation",
               backgroundColor: colors.secondary,
             )
           ]),

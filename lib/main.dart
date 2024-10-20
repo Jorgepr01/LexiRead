@@ -6,6 +6,7 @@ import 'package:readlexi/screens/home.dart';
 import 'package:readlexi/login/sign_in.dart';
 import 'package:readlexi/login/sign_up.dart';
 import 'package:readlexi/utils/auth_google.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Para usar Firestore
 import 'firebase_options.dart';
 
 void main() async {
@@ -58,6 +59,7 @@ class AuthCheck extends StatelessWidget {
                   );
                 }
                 if (ageSnapshot.hasData && ageSnapshot.data == true) {
+                  // Verificar y restaurar vidas antes de redirigir al Home
                   // Si el usuario tiene 'edad', redirige a Home
                   return Home();
                 } else {

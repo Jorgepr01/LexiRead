@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:readlexi/data/datas.dart';
+import 'package:readlexi/utils/logUser.dart';
 
 // Página de introducción
 class QuizIntroPage extends StatelessWidget {
@@ -9,6 +11,8 @@ class QuizIntroPage extends StatelessWidget {
   final int index;
   final PlanetInfo? planetInfo;
   final Map<String, dynamic>? nivel;
+  final int vidasIniciales; // Definir número de vidas iniciales
+  final String imagen;
 
   QuizIntroPage({
     required this.introText,
@@ -17,6 +21,8 @@ class QuizIntroPage extends StatelessWidget {
     required this.index,
     this.planetInfo,
     this.nivel,
+    required this.vidasIniciales,
+    required this.imagen,
   });
 
   @override
@@ -32,7 +38,7 @@ class QuizIntroPage extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
             Container(
               padding: const EdgeInsets.all(16.0),
@@ -46,6 +52,14 @@ class QuizIntroPage extends StatelessWidget {
                 textAlign: TextAlign.justify,
               ),
             ),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(35),
+              child: Image.asset(
+                "assets/question/$imagen", // Muestra la imagen
+                height: 250,
+              ),
+            ),
+            Spacer(),
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -55,8 +69,11 @@ class QuizIntroPage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          QuizQuestionsPage(quizData: quizData),
+                      builder: (context) => QuizQuestionsPage(
+                          nivel: nivel,
+                          quizData: quizData,
+                          vidasIniciales:
+                              vidasIniciales), // Pasamos 3 vidas iniciales
                     ),
                   );
                 },
@@ -82,8 +99,13 @@ class QuizIntroPage extends StatelessWidget {
 // Página de preguntas del quiz
 class QuizQuestionsPage extends StatefulWidget {
   final Map<String, dynamic> quizData;
+  final int vidasIniciales; // Definir número de vidas iniciales
+  final Map<String, dynamic>? nivel;
 
-  QuizQuestionsPage({required this.quizData});
+  QuizQuestionsPage(
+      {required this.quizData,
+      required this.vidasIniciales,
+      this.nivel}); // Recibir el número de vidas iniciales
 
   @override
   _QuizQuestionsPageState createState() => _QuizQuestionsPageState();
@@ -91,16 +113,48 @@ class QuizQuestionsPage extends StatefulWidget {
 
 class _QuizQuestionsPageState extends State<QuizQuestionsPage> {
   int? _selectedOptionIndex; // Guarda la opción seleccionada por el usuario
+  late int vidas; // Vidas que se inicializan según el parámetro recibido
+
+  @override
+  void initState() {
+    super.initState();
+    vidas = widget
+        .vidasIniciales; // Inicializar las vidas al valor pasado por el parámetro
+  }
+
+  // Función para mostrar corazones en el AppBar
+  Widget _buildVidas() {
+    List<Widget> hearts = [];
+    for (int i = 0; i < widget.vidasIniciales; i++) {
+      hearts.add(Icon(
+        i < vidas
+            ? Icons.favorite
+            : Icons.favorite_border, // Corazón lleno o vacío
+        color: Colors.red,
+        size: 24,
+      ));
+    }
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: hearts,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('Quiz'),
+        title: const Text('Quiz'), // Título del AppBar
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: _buildVidas(), // Mostrar los corazones en el AppBar
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -120,23 +174,38 @@ class _QuizQuestionsPageState extends State<QuizQuestionsPage> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: _selectedOptionIndex == null
-                    ? null // Deshabilitar el botón si no hay opción seleccionada
+                onPressed: _selectedOptionIndex == null || vidas == 0
+                    ? null // Deshabilitar el botón si no hay opción seleccionada o no tiene vidas
                     : () {
                         bool isCorrect = widget.quizData['options']
                             [_selectedOptionIndex!]['isCorrect'];
+
+                        // Si es incorrecto, reducir una vida
+                        if (!isCorrect) {
+                          setState(() {
+                            vidas -= 1;
+                          });
+                        }
+
                         _showResultDialog(context, isCorrect);
+
+                        // Mostrar diálogo si no tiene más vidas
+                        if (vidas == 0 && !isCorrect) {
+                          _showNoLivesDialog();
+                        }
                       },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _selectedOptionIndex == null
-                      ? Colors.grey // Deshabilitado
+                  backgroundColor: _selectedOptionIndex == null || vidas == 0
+                      ? Colors.grey // Deshabilitado si no hay opción o vidas
                       : Colors.pink, // Habilitado (color rosa original)
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8.0),
                   ),
                 ),
                 child: Text(
-                  'Confirmar respuesta',
+                  vidas == 0
+                      ? 'Sin vidas'
+                      : 'Confirmar respuesta', // Mostrar "Sin vidas" si se quedan sin vidas
                   style: TextStyle(fontSize: 18, color: Colors.white),
                 ),
               ),
@@ -144,6 +213,27 @@ class _QuizQuestionsPageState extends State<QuizQuestionsPage> {
           ],
         ),
       ),
+    );
+  }
+
+  // Diálogo cuando el usuario se queda sin vidas
+  Future<void> _showNoLivesDialog() async {
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('¡Sin vidas!'),
+          content: Text('No tienes más vidas disponibles.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Cerrar el diálogo
+              },
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -163,8 +253,39 @@ class _QuizQuestionsPageState extends State<QuizQuestionsPage> {
     }).toList();
   }
 
+  Future<void> marcarNivelCompletado(
+      String uid, String etapaId, String nivelId) async {
+    DocumentReference usuarioRef =
+        FirebaseFirestore.instance.collection('users').doc(uid);
+
+    await usuarioRef.update({'progreso.$etapaId.$nivelId': true});
+  }
+
+  Future<void> descontarVida(String uid) async {
+    DocumentReference usuarioRef =
+        FirebaseFirestore.instance.collection('users').doc(uid);
+    DocumentSnapshot usuarioSnapshot = await usuarioRef.get();
+    if (usuarioSnapshot.exists) {
+      Map<String, dynamic> data =
+          usuarioSnapshot.data() as Map<String, dynamic>;
+      int vidasActuales = data['vidas'];
+      await usuarioRef.update({
+        'vidas': vidasActuales - 1,
+      });
+      print('Vida descontada. Vidas restantes: ${vidasActuales - 1}');
+    }
+  }
+
   // Función para mostrar el diálogo de resultado
-  void _showResultDialog(BuildContext context, bool isCorrect) {
+  void _showResultDialog(BuildContext context, bool isCorrect) async {
+    final UserService _userService = UserService();
+    var userData = await _userService.getUserData();
+    if (!isCorrect) {
+      await descontarVida(userData?["uid"]);
+    } else {
+      marcarNivelCompletado(userData?["uid"], "${widget.nivel?["etapaId"]}",
+          "${widget.nivel?["id"]}");
+    }
     showDialog(
       context: context,
       builder: (BuildContext context) {

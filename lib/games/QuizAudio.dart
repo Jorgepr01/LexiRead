@@ -1,12 +1,16 @@
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:readlexi/utils/logUser.dart';
 
 class AnimalSoundQuiz extends StatefulWidget {
   final int index;
   final String audioSource;
   final List<dynamic> options;
   final String correctAnswer;
+  final int vidasIniciales;
+  final Map<String, dynamic>? nivel;
 
   const AnimalSoundQuiz({
     super.key,
@@ -14,6 +18,8 @@ class AnimalSoundQuiz extends StatefulWidget {
     required this.options,
     required this.correctAnswer,
     required this.index,
+    required this.vidasIniciales,
+    this.nivel, // Inicializar vidas
   });
 
   @override
@@ -26,12 +32,14 @@ class _AnimalSoundQuizState extends State<AnimalSoundQuiz> {
   Duration? _position;
   bool _isPlaying = false;
   int? _selectedOptionIndex; // Guarda la opción seleccionada por el usuario
+  late int vidas; // Se inicializa con el valor de vidasIniciales
 
   @override
   void initState() {
     super.initState();
     player = AudioPlayer();
     player.setReleaseMode(ReleaseMode.stop);
+    vidas = widget.vidasIniciales; // Asignamos las vidas iniciales al inicio
 
     player.onDurationChanged.listen((d) {
       setState(() {
@@ -74,11 +82,53 @@ class _AnimalSoundQuizState extends State<AnimalSoundQuiz> {
     });
   }
 
-  void _confirmAnswer() {
+  void _confirmAnswer() async {
     if (_selectedOptionIndex != null) {
       bool isCorrect =
           widget.options[_selectedOptionIndex!] == widget.correctAnswer;
+
+      // Si es incorrecto, restamos una vida
+      final UserService _userService = UserService();
+      var userData = await _userService.getUserData();
+      if (!isCorrect) {
+        await descontarVida(userData?["uid"]);
+        setState(() {
+          vidas -= 1;
+        });
+      } else {
+        marcarNivelCompletado(userData?["uid"], "${widget.nivel?["etapaId"]}",
+            "${widget.nivel?["id"]}");
+      }
+
       _showResultDialog(isCorrect);
+
+      // Si se queda sin vidas, mostrar diálogo de "sin vidas"
+      if (vidas == 0 && !isCorrect) {
+        _showNoLivesDialog();
+      }
+    }
+  }
+
+  Future<void> marcarNivelCompletado(
+      String uid, String etapaId, String nivelId) async {
+    DocumentReference usuarioRef =
+        FirebaseFirestore.instance.collection('users').doc(uid);
+
+    await usuarioRef.update({'progreso.$etapaId.$nivelId': true});
+  }
+
+  Future<void> descontarVida(String uid) async {
+    DocumentReference usuarioRef =
+        FirebaseFirestore.instance.collection('users').doc(uid);
+    DocumentSnapshot usuarioSnapshot = await usuarioRef.get();
+    if (usuarioSnapshot.exists) {
+      Map<String, dynamic> data =
+          usuarioSnapshot.data() as Map<String, dynamic>;
+      int vidasActuales = data['vidas'];
+      await usuarioRef.update({
+        'vidas': vidasActuales - 1,
+      });
+      print('Vida descontada. Vidas restantes: ${vidasActuales - 1}');
     }
   }
 
@@ -104,6 +154,43 @@ class _AnimalSoundQuizState extends State<AnimalSoundQuiz> {
     );
   }
 
+  // Diálogo para mostrar cuando se quedan sin vidas
+  Future<void> _showNoLivesDialog() async {
+    await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('¡Sin vidas!'),
+        content: const Text('No tienes más vidas disponibles.'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Cierra el diálogo
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget para mostrar corazones según el número de vidas restantes
+  Widget _buildVidas() {
+    List<Widget> hearts = [];
+    for (int i = 0; i < widget.vidasIniciales; i++) {
+      hearts.add(Icon(
+        i < vidas
+            ? Icons.favorite
+            : Icons.favorite_border, // Corazón lleno o vacío
+        color: Colors.red,
+        size: 24,
+      ));
+    }
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: hearts,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final color = Theme.of(context).primaryColor;
@@ -116,10 +203,16 @@ class _AnimalSoundQuizState extends State<AnimalSoundQuiz> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Animal Sound Quiz'),
+        title: Text("Quiz"),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        centerTitle: true,
+        actions: [
+          // Agregamos los íconos de corazones al AppBar
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: _buildVidas(),
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -166,12 +259,12 @@ class _AnimalSoundQuizState extends State<AnimalSoundQuiz> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: _selectedOptionIndex == null
-                    ? null // Deshabilitar botón si no se seleccionó opción
+                onPressed: _selectedOptionIndex == null || vidas == 0
+                    ? null // Deshabilitar botón si no se seleccionó opción o no hay vidas
                     : _confirmAnswer,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _selectedOptionIndex == null
-                      ? Colors.grey
+                  backgroundColor: _selectedOptionIndex == null || vidas == 0
+                      ? Colors.grey // Deshabilitar si no hay opción o vidas
                       : Colors.pink, // Cambia color según estado
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8.0),
